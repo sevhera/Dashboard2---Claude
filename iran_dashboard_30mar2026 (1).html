@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iran War — Political Intelligence Dashboard · 30 March 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg: #ffffff; --bg2: #f5f4f0; --bg3: #eeecea;
+    --txt: #1a1a1a; --txt2: #444441; --txt3: #888780;
+    --bdr: rgba(0,0,0,0.12); --bdr2: rgba(0,0,0,0.22);
+    --accent: #1A3A5C; --accent-mid: #2B5580;
+    --radius: 8px; --radius-lg: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a; --bg2: #252523; --bg3: #2e2e2b;
+      --txt: #e8e6de; --txt2: #b4b2a9; --txt3: #5f5e5a;
+      --bdr: rgba(255,255,255,0.1); --bdr2: rgba(255,255,255,0.2);
+    }
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; background: var(--bg2); color: var(--txt); line-height: 1.5; }
+  .page { max-width: 960px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+
+  /* Header */
+  .header { background: var(--accent); border-radius: var(--radius-lg); padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+  .header-left { display: flex; flex-direction: column; gap: 3px; }
+  .header-title { font-size: 17px; font-weight: 600; color: #fff; }
+  .header-sub { font-size: 12px; color: #B5D4F4; }
+  .status-pill { font-size: 11px; font-weight: 600; background: #FCEBEB; color: #A32D2D; border-radius: 4px; padding: 4px 10px; white-space: nowrap; align-self: flex-start; }
+
+  /* Nav */
+  .nav { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1.25rem; }
+  .nav button { font-size: 12px; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--bdr); background: var(--bg); color: var(--txt2); cursor: pointer; transition: all .15s; font-family: inherit; }
+  .nav button:hover { background: var(--bg3); }
+  .nav button.active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 500; }
+
+  /* Sections */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* Alerts */
+  .alert { border-radius: var(--radius); padding: 11px 14px; margin-bottom: 1rem; font-size: 13px; line-height: 1.55; }
+  .alert-red { background: #FCEBEB; color: #791F1F; border-left: 3px solid #A32D2D; }
+  .alert-blue { background: #E6F1FB; color: #0C447C; border-left: 3px solid #185FA5; }
+  .alert strong { font-weight: 600; }
+
+  /* Metrics */
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 1.25rem; }
+  .metric { background: var(--bg2); border: 1px solid var(--bdr); border-radius: var(--radius); padding: 12px 14px; }
+  .metric-label { font-size: 10px; color: var(--txt3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+  .metric-value { font-size: 22px; font-weight: 600; line-height: 1; }
+  .metric-sub { font-size: 11px; color: var(--txt3); margin-top: 3px; }
+  .m-red .metric-value { color: #A32D2D; }
+  .m-amber .metric-value { color: #854F0B; }
+  .m-blue .metric-value { color: #185FA5; }
+  .m-green .metric-value { color: #0F6E56; }
+
+  /* Cards */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-bottom: 1.25rem; }
+  .card { background: var(--bg); border: 1px solid var(--bdr); border-radius: var(--radius-lg); padding: 14px 16px; }
+  .card-head { font-size: 12px; font-weight: 600; color: var(--txt2); margin-bottom: 8px; display: flex; align-items: center; gap: 7px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .card-body { font-size: 13px; color: var(--txt2); line-height: 1.55; }
+  .card-body strong { color: var(--txt); font-weight: 600; }
+
+  /* Chart wrap */
+  .chart-wrap { background: var(--bg); border: 1px solid var(--bdr); border-radius: var(--radius-lg); padding: 14px 16px; margin-bottom: 1.25rem; }
+  .chart-title { font-size: 12px; font-weight: 600; color: var(--txt2); margin-bottom: 12px; }
+
+  /* Legend */
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; font-size: 11px; color: var(--txt2); }
+  .leg-item { display: flex; align-items: center; gap: 5px; }
+  .leg-sq { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+
+  /* Timeline */
+  .timeline { margin-bottom: 1.25rem; }
+  .tl-item { display: flex; gap: 0; }
+  .tl-left { width: 76px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; }
+  .tl-date { font-size: 11px; color: var(--txt3); text-align: center; padding-top: 2px; line-height: 1.3; }
+  .tl-spine { display: flex; flex-direction: column; align-items: center; flex: 1; min-height: 52px; }
+  .tl-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+  .tl-line { width: 1.5px; flex: 1; min-height: 16px; background: var(--bdr2); }
+  .tl-content { flex: 1; padding: 2px 0 18px 12px; }
+  .tl-text { font-size: 13px; color: var(--txt2); line-height: 1.5; }
+  .tl-text strong { color: var(--txt); font-weight: 600; }
+  .tl-tag { display: inline-block; font-size: 10px; font-weight: 600; border-radius: 3px; padding: 1px 6px; margin-left: 4px; vertical-align: middle; }
+
+  /* UN box */
+  .un-box { background: var(--bg); border: 1px solid var(--bdr); border-left: 3px solid #185FA5; border-radius: var(--radius-lg); padding: 14px 16px; margin-bottom: 1.25rem; }
+  .un-head { font-size: 13px; font-weight: 600; color: #185FA5; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .un-row { display: flex; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--bdr); align-items: flex-start; }
+  .un-row:last-child { border-bottom: none; }
+  .un-label { font-size: 10px; font-weight: 600; color: #0C447C; background: #E6F1FB; border-radius: 4px; padding: 2px 7px; white-space: nowrap; flex-shrink: 0; margin-top: 2px; }
+  .un-text { font-size: 13px; color: var(--txt2); line-height: 1.5; }
+  .un-text strong { color: var(--txt); font-weight: 600; }
+  .un-text em { font-style: italic; color: var(--txt3); }
+
+  /* Two col */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.25rem; }
+
+  /* Position bars */
+  .pos-wrap { margin-bottom: 1.25rem; }
+  .pos-row { margin-bottom: 8px; }
+  .pos-label-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--txt2); margin-bottom: 4px; }
+  .pos-label-row span:last-child { font-size: 11px; color: var(--txt3); }
+  .pos-bar { height: 6px; border-radius: 3px; background: var(--bdr); overflow: hidden; }
+  .pos-fill { height: 100%; border-radius: 3px; }
+  .pos-note { font-size: 11px; color: var(--txt3); margin-top: 8px; }
+
+  /* Outlet rows */
+  .outlet-row { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--bdr); }
+  .outlet-row:last-child { border-bottom: none; }
+  .outlet-badge { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; margin-top: 2px; }
+  .outlet-name { font-size: 13px; font-weight: 600; color: var(--txt); }
+  .outlet-desc { font-size: 12px; color: var(--txt2); line-height: 1.5; margin-top: 2px; }
+
+  /* Disinfo table */
+  .dis-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .dis-table th { font-size: 11px; font-weight: 600; color: var(--txt2); padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--bdr2); }
+  .dis-table td { padding: 10px; vertical-align: top; border-bottom: 1px solid var(--bdr); color: var(--txt2); line-height: 1.5; }
+  .dis-table tr:last-child td { border-bottom: none; }
+  .tag-pill { display: inline-block; font-size: 10px; font-weight: 600; border-radius: 3px; padding: 1px 5px; margin: 2px 2px 2px 0; }
+
+  /* Section label */
+  .sec-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--txt3); margin: 1.25rem 0 8px; }
+
+  /* Source cat header */
+  .src-cat { font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: 6px; margin: 1rem 0 8px; }
+
+  /* Ask button */
+  .ask-btn { font-size: 12px; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--bdr2); background: transparent; color: var(--txt2); cursor: pointer; margin-top: 10px; font-family: inherit; transition: all .15s; }
+  .ask-btn:hover { background: var(--bg2); }
+
+  /* Generated bar */
+  .gen-bar { font-size: 11px; color: var(--txt3); border-top: 1px solid var(--bdr); margin-top: 2rem; padding-top: 12px; text-align: center; }
+
+  @media (max-width: 560px) {
+    .two-col { grid-template-columns: 1fr; }
+    .metrics { grid-template-columns: 1fr 1fr; }
+    .header { flex-direction: column; }
+  }
+  @media print {
+    body { background: white; }
+    .nav { display: none; }
+    .section { display: block !important; }
+    .section + .section { page-break-before: always; }
+    .ask-btn { display: none; }
+    .page { padding: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div class="header-left">
+      <div class="header-title">Iran war — political intelligence dashboard</div>
+      <div class="header-sub">30 March 2026 &middot; Day 31 &middot; Sources: Asharq Al-Awsat, Al Arabiya, Al Ahram, Al Jazeera, UN News + regional Arabic media</div>
+    </div>
+    <div class="status-pill">Active conflict</div>
+  </div>
+
+  <div class="nav">
+    <button class="active" onclick="showTab('overview',this)">Overview</button>
+    <button onclick="showTab('military',this)">Military</button>
+    <button onclick="showTab('diplomacy',this)">Diplomacy</button>
+    <button onclick="showTab('energy',this)">Energy</button>
+    <button onclick="showTab('narratives',this)">Media narratives</button>
+    <button onclick="showTab('disinfo',this)">Disinformation</button>
+    <button onclick="showTab('sources',this)">Source guide</button>
+  </div>
+
+  <!-- ═══ OVERVIEW ═══ -->
+  <div id="tab-overview" class="section active">
+    <div class="alert alert-red"><strong>Breaking — 30 March:</strong> Trump threatens to obliterate Iran's power plants, oil wells and Kharg Island unless Hormuz reopened "immediately" by 6 April. Brent crude above $115/barrel. Spain closes airspace to US planes. Houthis confirm first attack on Israel.</div>
+    <div class="alert alert-blue"><strong>UN developments — 30 March:</strong> Secretary-General appoints <strong>Jean Arnault</strong> (France) as Personal Envoy for Middle East peace. Separate <strong>UNOPS Task Force on Strait of Hormuz</strong> established under Jorge Moreira da Silva (UNOPS/UNCTAD/IMO/ICC) — focused on humanitarian and fertiliser transit.</div>
+
+    <div class="metrics">
+      <div class="metric m-red"><div class="metric-label">War day</div><div class="metric-value">31</div><div class="metric-sub">Since 28 Feb 2026</div></div>
+      <div class="metric m-red"><div class="metric-label">Brent crude</div><div class="metric-value">$115+</div><div class="metric-sub">+50% in March</div></div>
+      <div class="metric m-red"><div class="metric-label">Iran deaths</div><div class="metric-value">1,750+</div><div class="metric-sub">IRNA official figure</div></div>
+      <div class="metric m-amber"><div class="metric-label">Lebanon deaths</div><div class="metric-value">1,000+</div><div class="metric-sub">1.2m displaced</div></div>
+      <div class="metric m-amber"><div class="metric-label">US casualties</div><div class="metric-value">290</div><div class="metric-sub">Wounded &middot; 13 killed</div></div>
+      <div class="metric m-blue"><div class="metric-label">Active mediators</div><div class="metric-value">6+</div><div class="metric-sub">Pak &middot; Egypt &middot; Turkey &middot; UN &middot; China</div></div>
+    </div>
+
+    <div class="sec-label">Escalation timeline</div>
+    <div class="timeline">
+      <div class="tl-item"><div class="tl-left"><div class="tl-date">28 Feb</div></div><div class="tl-spine"><div class="tl-dot" style="background:#A32D2D;"></div><div class="tl-line"></div></div><div class="tl-content"><div class="tl-text"><strong>War begins.</strong> US-Israel launch Operation Epic Fury. Supreme Leader Ali Khamenei killed. Iran retaliates: True Promise 4 strikes Gulf states, Israel, US bases.</div></div></div>
+      <div class="tl-item"><div class="tl-left"><div class="tl-date">1 Mar</div></div><div class="tl-spine"><div class="tl-dot" style="background:#185FA5;"></div><div class="tl-line"></div></div><div class="tl-content"><div class="tl-text"><strong>UN Security Council emergency session.</strong> Guterres warns of "chain of events nobody can control." Hezbollah joins. Lebanon government condemns Hezbollah's unauthorised entry into war.<span class="tl-tag" style="background:#E6F1FB;color:#0C447C;">UN</span></div></div></div>
+      <div class="tl-item"><div class="tl-left"><div class="tl-date">4 Mar</div></div><div class="tl-spine"><div class="tl-dot" style="background:#A32D2D;"></div><div class="tl-line"></div></div><div class="tl-content"><div class="tl-text"><strong>Hormuz closed.</strong> IRGC declares strait closed to US/Israel-linked vessels. GCC food and energy crisis begins. Iran charges transit fees in Chinese Yuan.</div></div></div>
+      <div class="tl-item"><div class="tl-left"><div class="tl-date">8 Mar</div></div><div class="tl-spine"><div class="tl-dot" style="background:#854F0B;"></div><div class="tl-line"></div></div><div class="tl-content"><div class="tl-text"><strong>Mojtaba Khamenei installed</strong> as new Supreme Leader under IRGC pressure. Process constitutionally disputed — eight Assembly members boycotted.</div></div></div>
+      <div class="tl-item"><div class="tl-left"><div class="tl-date">12 Mar</div></div><div class="tl-spine"><div class="tl-dot" style="background:#185FA5;"></div><div class="tl-line"></div></div><div class="tl-content"><div class="tl-text"><strong>UNSC Resolution 2817</strong> adopted — condemns Iran's "egregious attacks" against Gulf neighbours. Co-sponsored by 135 countries. Russia's rival draft rejected.<span class="tl-tag" style="background:#E6F1FB;color:#0C447C;">UN</span></div></div></div>
+      <div class="tl-item"><div class="tl-left"><div class="tl-date">13 Mar</div></div><div class="tl-spine"><div class="tl-dot" style="background:#A32D2D;"></div><div class="tl-line"></div></div><div class="tl-content"><div class="tl-text"><strong>Kharg Island struck.</strong> US hits 90 targets including mine storage and missile bunkers. Trump: island "totally obliterated" of military assets — oil infrastructure spared "for now."</div></div></div>
+      <div class="tl-item"><div class="tl-left"><div class="tl-date">25 Mar</div></div><div class="tl-spine"><div class="tl-dot" style="background:#854F0B;"></div><div class="tl-line"></div></div><div class="tl-content"><div class="tl-text"><strong>Iran rejects</strong> US 15-point ceasefire plan via Pakistan. Issues own 5-point counter including Hormuz sovereignty and war reparations. FM Araghchi: "We do not plan on any negotiations."</div></div></div>
+      <div class="tl-item"><div class="tl-left"><div class="tl-date">29 Mar</div></div><div class="tl-spine"><div class="tl-dot" style="background:#0F6E56;"></div><div class="tl-line"></div></div><div class="tl-content"><div class="tl-text"><strong>Islamabad quadrilateral.</strong> Saudi Arabia, Egypt, Turkey, Pakistan meet. China confirms support for Islamabad as talks venue. PMF seen entering Iran. Houthis prepare to enter war.</div></div></div>
+      <div class="tl-item"><div class="tl-left"><div class="tl-date">30 Mar</div></div><div class="tl-spine"><div class="tl-dot" style="background:#185FA5;"></div><div class="tl-line"></div></div><div class="tl-content"><div class="tl-text"><strong>UN appoints Jean Arnault</strong> as Personal Envoy. <strong>UNOPS Task Force on Hormuz</strong> established under Jorge Moreira da Silva (UNCTAD, IMO, ICC) — focused on humanitarian and fertiliser transit. Guterres: "time to stop climbing the escalation ladder."<span class="tl-tag" style="background:#E6F1FB;color:#0C447C;">UN</span></div></div></div>
+      <div class="tl-item"><div class="tl-left"><div class="tl-date">30 Mar</div></div><div class="tl-spine"><div class="tl-dot" style="background:#A32D2D;"></div><div class="tl-line" style="background:transparent;"></div></div><div class="tl-content"><div class="tl-text"><strong>Trump threatens Kharg Island oil infrastructure.</strong> Houthis confirm first attack on Israel. Brent crude above $115. Spain closes airspace to US planes. Deadline extended to 6 April.</div></div></div>
+    </div>
+  </div>
+
+  <!-- ═══ MILITARY ═══ -->
+  <div id="tab-military" class="section">
+    <div class="metrics">
+      <div class="metric m-red"><div class="metric-label">Targets struck (CENTCOM)</div><div class="metric-value">10,000+</div><div class="metric-sub">Since 28 Feb</div></div>
+      <div class="metric m-red"><div class="metric-label">Iran mil. production</div><div class="metric-value">~67%</div><div class="metric-sub">Claimed destroyed</div></div>
+      <div class="metric m-amber"><div class="metric-label">Hezbollah attacks</div><div class="metric-value">3,500+</div><div class="metric-sub">Rockets/drones on Israel</div></div>
+      <div class="metric m-red"><div class="metric-label">US troops deploying</div><div class="metric-value">1,000+</div><div class="metric-sub">82nd Airborne + Marines</div></div>
+    </div>
+    <div class="cards">
+      <div class="card"><div class="card-head"><div class="dot" style="background:#A32D2D;"></div>Kharg Island — deadline 6 April</div><div class="card-body">Handles <strong>90% of Iran's crude exports</strong>. US struck military positions 13 Mar (90 targets). Trump threatened to obliterate oil infrastructure by 6 April if no deal. Iran has reinforced island with troops, air defences and traps. Ground operation requires Hormuz transit — high casualty risk. Naval escort operation more likely than amphibious invasion.</div></div>
+      <div class="card"><div class="card-head"><div class="dot" style="background:#854F0B;"></div>Lebanon front</div><div class="card-body">Israel advancing north of Litani River. <strong>1,000+ killed</strong> in Lebanon, 1.2m displaced. Hezbollah issued record 63 claims of responsibility in one day. Lebanese PM Salam: Hezbollah dragged Lebanon into war to "avenge Khamenei." Lebanon formally outlawed Hezbollah military activities.</div></div>
+      <div class="card"><div class="card-head"><div class="dot" style="background:#185FA5;"></div>Gulf state strikes</div><div class="card-body"><strong>83% of Iranian missiles targeted Gulf states</strong> vs 17% at Israel (Asharq Al-Awsat). UAE intercepted 414 ballistic missiles, 1,914 drones, 15 cruise missiles — 11 killed. Saudi Eastern Province, Kuwait airport, UAE, Bahrain, Jordan all struck. Kuwait foiled assassination plot against state leaders.</div></div>
+      <div class="card"><div class="card-head"><div class="dot" style="background:#534AB7;"></div>New front: Houthis + Iraq PMF</div><div class="card-body">Houthis formally entered the war 29–30 March with attacks on Israel. PMF seen crossing into Iran (29 Mar). Combined IRGC-Houthi closure of Hormuz and Bab al-Mandab would block <strong>~32% of global seaborne energy</strong>.</div></div>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-title">Iranian strikes by target country (estimated distribution)</div>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-sq" style="background:#E24B4A;"></div>Israel 17%</div>
+        <div class="leg-item"><div class="leg-sq" style="background:#EF9F27;"></div>Saudi Arabia 28%</div>
+        <div class="leg-item"><div class="leg-sq" style="background:#378ADD;"></div>UAE 22%</div>
+        <div class="leg-item"><div class="leg-sq" style="background:#1D9E75;"></div>Kuwait 14%</div>
+        <div class="leg-item"><div class="leg-sq" style="background:#7F77DD;"></div>Other Gulf 19%</div>
+      </div>
+      <div style="position:relative;width:100%;max-width:340px;height:220px;margin:0 auto;"><canvas id="strikeChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ═══ DIPLOMACY ═══ -->
+  <div id="tab-diplomacy" class="section">
+    <div class="metrics">
+      <div class="metric m-red"><div class="metric-label">Direct US-Iran talks</div><div class="metric-value">None</div><div class="metric-sub">Iran denies negotiations</div></div>
+      <div class="metric m-blue"><div class="metric-label">Active mediators</div><div class="metric-value">6+</div><div class="metric-sub">Pak &middot; Egypt &middot; Turkey &middot; Oman &middot; UN &middot; China</div></div>
+      <div class="metric m-amber"><div class="metric-label">Hormuz deadline</div><div class="metric-value">6 Apr</div><div class="metric-sub">Trump extended from 30 Mar</div></div>
+      <div class="metric m-blue"><div class="metric-label">UN envoy</div><div class="metric-value">Arnault</div><div class="metric-sub">Appointed 30 Mar</div></div>
+    </div>
+
+    <div class="un-box">
+      <div class="un-head">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        UN initiatives — announced 30 March 2026
+      </div>
+      <div class="un-row"><div class="un-label">Personal Envoy</div><div class="un-text"><strong>Jean Arnault</strong> (France) — appointed by SG Guterres. Nearly 40 years of international mediation; led UN missions in Afghanistan, Guatemala, Burundi, Georgia and Colombia. Will "be in contact with all parties" and examine civilian impact. Guterres: "time to stop climbing the escalation ladder." <em>Neither the US nor Israel invited UN mediation — Arnault's leverage is limited but his appointment adds multilateral institutional legitimacy to ceasefire pressure.</em></div></div>
+      <div class="un-row"><div class="un-label">UNOPS Task Force</div><div class="un-text"><strong>Strait of Hormuz Task Force</strong> headed by <strong>Jorge Moreira da Silva</strong> (UNOPS Executive Director). Members: UNCTAD, IMO, ICC. Mandate: safe, orderly transit for humanitarian purposes — specifically fertiliser and raw materials. <em>Analytical note: this is a humanitarian corridor mechanism, not a ceasefire instrument. It attempts to carve out protected transit within the blockade without requiring Iran to concede its Hormuz sovereignty demand.</em></div></div>
+      <div class="un-row"><div class="un-label">UNSC Res. 2817</div><div class="un-text"><strong>Resolution 2817</strong> (12 March) — condemns Iran's "egregious attacks" against Gulf neighbours. Co-sponsored by 135 countries. Russia's rival draft condemning US-Israeli strikes was rejected. OHCHR experts separately condemned the Minab school strike (160+ students killed) and called for accountability for all parties.</div></div>
+    </div>
+
+    <div class="sec-label">US &amp; Iran positions</div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-head"><div class="dot" style="background:#185FA5;"></div>US 15-point framework</div>
+        <div style="font-size:12px;color:var(--txt2);">
+          <div style="padding:5px 0;border-bottom:1px solid var(--bdr);">Reopen Strait of Hormuz</div>
+          <div style="padding:5px 0;border-bottom:1px solid var(--bdr);">Remove enriched uranium stockpiles</div>
+          <div style="padding:5px 0;border-bottom:1px solid var(--bdr);">Halt nuclear enrichment permanently</div>
+          <div style="padding:5px 0;border-bottom:1px solid var(--bdr);">Curb ballistic missile development</div>
+          <div style="padding:5px 0;border-bottom:1px solid var(--bdr);">End funding of regional proxies</div>
+          <div style="padding:5px 0;border-bottom:1px solid var(--bdr);">Full IAEA access and monitoring</div>
+          <div style="padding:5px 0;">Sanctions relief in exchange</div>
+          <div style="margin-top:8px;font-size:11px;color:var(--txt3);">Delivered via Pakistani Army Commander Asim Munir. Israel not included in talks.</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="dot" style="background:#A32D2D;"></div>Iran's 5-point counter</div>
+        <div style="font-size:12px;color:var(--txt2);">
+          <div style="padding:5px 0;border-bottom:1px solid var(--bdr);">End to all US-Israeli aggression</div>
+          <div style="padding:5px 0;border-bottom:1px solid var(--bdr);">Concrete guarantees against recurrence</div>
+          <div style="padding:5px 0;border-bottom:1px solid var(--bdr);">Guaranteed war reparations</div>
+          <div style="padding:5px 0;border-bottom:1px solid var(--bdr);">Comprehensive ceasefire incl. Lebanon</div>
+          <div style="padding:5px 0;"><strong style="color:#A32D2D;">Recognition of sovereignty over Hormuz</strong></div>
+          <div style="margin-top:8px;font-size:11px;color:var(--txt3);">FM Araghchi: "We do not plan on any negotiations." Hormuz sovereignty is a pre-war structural demand — not a wartime concession.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">Arab &amp; regional state positions — alignment with military vs diplomatic resolution</div>
+      <div class="pos-wrap">
+        <div class="pos-row"><div class="pos-label-row"><span>UAE</span><span>414 missiles intercepted; hardened stance</span></div><div class="pos-bar"><div class="pos-fill" style="width:85%;background:#E24B4A;"></div></div></div>
+        <div class="pos-row"><div class="pos-label-row"><span>Saudi Arabia</span><span>Struck by Iran; pursuing diplomacy via Islamabad</span></div><div class="pos-bar"><div class="pos-fill" style="width:72%;background:#EF9F27;"></div></div></div>
+        <div class="pos-row"><div class="pos-label-row"><span>Jordan</span><span>Condemns Iran attacks; calls for diplomacy</span></div><div class="pos-bar"><div class="pos-fill" style="width:55%;background:#7F77DD;"></div></div></div>
+        <div class="pos-row"><div class="pos-label-row"><span>Egypt</span><span>Active mediator; opposes the war itself</span></div><div class="pos-bar"><div class="pos-fill" style="width:35%;background:#378ADD;"></div></div></div>
+        <div class="pos-row"><div class="pos-label-row"><span>Turkey</span><span>Neutral mediator; NATO member</span></div><div class="pos-bar"><div class="pos-fill" style="width:38%;background:#1D9E75;"></div></div></div>
+        <div class="pos-row"><div class="pos-label-row"><span>Iraq</span><span>Government neutral; PMF fighting for Iran</span></div><div class="pos-bar"><div class="pos-fill" style="width:22%;background:#888780;"></div></div></div>
+        <div class="pos-row"><div class="pos-label-row"><span>Lebanon (state)</span><span>Government vs Hezbollah internal split</span></div><div class="pos-bar"><div class="pos-fill" style="width:18%;background:#888780;"></div></div></div>
+      </div>
+      <div class="pos-note">Longer bar = more aligned with US-Israeli military objectives. Shorter = prioritising diplomacy or ambivalent.</div>
+    </div>
+  </div>
+
+  <!-- ═══ ENERGY ═══ -->
+  <div id="tab-energy" class="section">
+    <div class="metrics">
+      <div class="metric m-red"><div class="metric-label">Brent crude</div><div class="metric-value">$115+</div><div class="metric-sub">+50% in March</div></div>
+      <div class="metric m-red"><div class="metric-label">GCC oil output loss</div><div class="metric-value">10m bpd</div><div class="metric-sub">By 12 March</div></div>
+      <div class="metric m-red"><div class="metric-label">Qatar LNG capacity</div><div class="metric-value">-17%</div><div class="metric-sub">Force majeure declared</div></div>
+      <div class="metric m-amber"><div class="metric-label">EU gas prices</div><div class="metric-value">+63%</div><div class="metric-sub">Since 28 Feb</div></div>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-title">Oil price trajectory — Brent crude ($/barrel)</div>
+      <div class="legend"><div class="leg-item"><div class="leg-sq" style="background:#E24B4A;"></div>Brent crude</div><div class="leg-item"><div class="leg-sq" style="background:#B5D4F4;"></div>Pre-war level (~$76)</div></div>
+      <div style="position:relative;width:100%;height:220px;"><canvas id="oilChart"></canvas></div>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-title">Regional energy impact severity</div>
+      <div style="position:relative;width:100%;height:260px;"><canvas id="impactChart"></canvas></div>
+    </div>
+    <div class="cards">
+      <div class="card"><div class="card-head"><div class="dot" style="background:#A32D2D;"></div>UNOPS Hormuz Task Force — humanitarian corridor</div><div class="card-body">The UNOPS-led task force (IMO, UNCTAD, ICC) is specifically focused on <strong>humanitarian and fertiliser transit</strong> — not the broader Hormuz sovereignty dispute. It attempts to carve protected corridors within the blockade without requiring Iran to concede its leverage. El-Sisi warned oil could hit <strong>$200/barrel</strong> if the war continues.</div></div>
+      <div class="card"><div class="card-head"><div class="dot" style="background:#854F0B;"></div>Hormuz + Bab al-Mandab double risk</div><div class="card-body">Houthis' formal entry now threatens Bab al-Mandab as well. Combined: <strong>~32% of global seaborne energy</strong> through two simultaneous chokepoints. Gulf states import 70%+ of caloric intake through the Strait — food security emergency declared across GCC. Desalination plants threatened if Kharg oil infrastructure is struck.</div></div>
+    </div>
+  </div>
+
+  <!-- ═══ NARRATIVES ═══ -->
+  <div id="tab-narratives" class="section">
+    <div class="card" style="margin-bottom:1rem;"><div class="card-head"><div class="dot" style="background:#888780;"></div>How to read this panel</div><div class="card-body">Each outlet is assessed for its editorial lean and funding source. Triangulate across categories rather than relying on any single narrative. Pay attention to what each outlet <em>omits</em> as much as what it covers.</div></div>
+
+    <div class="card" style="margin-bottom:10px;">
+      <div class="chart-title" style="margin-bottom:12px;">Pan-Arab &amp; Gulf newspapers</div>
+      <div class="outlet-row"><div><div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;"><div class="outlet-name">Asharq Al-Awsat</div><span class="outlet-badge" style="background:#FAEEDA;color:#633806;">Saudi &middot; Pan-Arab</span></div><div class="outlet-desc">Most nuanced pan-Arab framing. Condemns Iranian strikes but does not endorse the US-Israeli operation. Key scoops: Iran's Lebanon pledge, Syria's 3-option analysis, Islamabad quadrilateral. Reports 83% of Iranian missiles targeted Gulf states.</div></div></div>
+      <div class="outlet-row"><div><div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;"><div class="outlet-name">Al Arabiya / Sky News Arabia</div><span class="outlet-badge" style="background:#FAECE7;color:#712B13;">Saudi-owned &middot; Dubai</span></div><div class="outlet-desc">Gulf's dominant breaking news platform. Key exclusive: Iranian FM secretly signalled willingness to negotiate to Witkoff. Broadly aligned with Gulf government positions. Strong US military sourcing.</div></div></div>
+      <div class="outlet-row"><div><div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;"><div class="outlet-name">Al Ahram / Ahram Online</div><span class="outlet-badge" style="background:#E1F5EE;color:#085041;">Egyptian state-affiliated</span></div><div class="outlet-desc">"Double condemnation" — condemns Iranian strikes AND the war itself. Warned Iran's fall would be "a painful blow to Arab national security." Tracks Egypt's mediation role and Palestinian issue linkage to any settlement.</div></div></div>
+      <div class="outlet-row"><div><div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;"><div class="outlet-name">Al Jazeera Net</div><span class="outlet-badge" style="background:#E6F1FB;color:#0C447C;">Qatar state-funded</span></div><div class="outlet-desc">Most granular Arabic conflict coverage with on-the-ground correspondents in Tehran, Beirut and Baghdad. Emphasises civilian harm and Arab public sentiment — which diverges significantly from Gulf governments' official positions.</div></div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:10px;">
+      <div class="chart-title" style="margin-bottom:12px;">Iranian media (Farsi + Arabic)</div>
+      <div class="outlet-row"><div><div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;"><div class="outlet-name">Iran International (Arabic)</div><span class="outlet-badge" style="background:#FAEEDA;color:#633806;">Saudi-linked &middot; London</span></div><div class="outlet-desc">Sharply anti-regime. Covers domestic unrest, IRGC power grab, Mojtaba's contested legitimacy. Accused of pro-monarchist framing. Wide Arab diaspora reach.</div></div></div>
+      <div class="outlet-row"><div><div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;"><div class="outlet-name">Iran Press / Al-Alam TV</div><span class="outlet-badge" style="background:#FCEBEB;color:#791F1F;">Iranian state</span></div><div class="outlet-desc">Iran Press: official visual news agency. Al-Alam: Iran's Arabic diplomatic outreach to Iraq, Lebanon, Yemen. Both frame Iranian strikes as "legitimate retaliation." Track both to understand Tehran's Arab-world messaging strategy.</div></div></div>
+      <div class="outlet-row"><div><div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;"><div class="outlet-name">Kayhan Arabic / Al-Wefagh</div><span class="outlet-badge" style="background:#FCEBEB;color:#791F1F;">Iranian hardline state</span></div><div class="outlet-desc">Kayhan directly linked to Supreme Leader's office. Al-Wefagh is the government's Arabic daily. Together represent the ideological ceiling of Iranian state messaging.</div></div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:10px;">
+      <div class="chart-title" style="margin-bottom:12px;">Lebanese, Iraqi &amp; specialist outlets</div>
+      <div class="outlet-row"><div><div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;"><div class="outlet-name">An-Nahar / Al-Akhbar (Lebanon)</div><span class="outlet-badge" style="background:#EAF3DE;color:#27500A;">Pro-state</span>&nbsp;<span class="outlet-badge" style="background:#FCEBEB;color:#791F1F;">Hezbollah-aligned</span></div><div class="outlet-desc">Read both to map Lebanon's communal fracture. An-Nahar: pro-state, angry at Hezbollah for dragging Lebanon into war. Al-Akhbar: pro-resistance, frames Israeli attacks as aggression.</div></div></div>
+      <div class="outlet-row"><div><div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;"><div class="outlet-name">Al-Mada / Al-Sabah (Iraq)</div><span class="outlet-badge" style="background:#EEEDFE;color:#3C3489;">Iraqi independent / official</span></div><div class="outlet-desc">Track Baghdad's impossible position: PMF attacking Gulf neighbours from Iraqi soil while government condemns the attacks. Essential for the Iraq proxy crisis angle.</div></div></div>
+      <div class="outlet-row"><div><div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;"><div class="outlet-name">Al Eqtisadiah</div><span class="outlet-badge" style="background:#FAEEDA;color:#633806;">Saudi economic daily</span></div><div class="outlet-desc">Saudi Arabia's premier economic newspaper. Essential for Gulf energy market analysis, Hormuz closure consequences, and GCC structural damage assessment.</div></div></div>
+      <div class="outlet-row"><div><div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;"><div class="outlet-name">France 24 Arabic / RT Arabic</div><span class="outlet-badge" style="background:#E1F5EE;color:#085041;">French state</span>&nbsp;<span class="outlet-badge" style="background:#FCEBEB;color:#791F1F;">Russian state</span></div><div class="outlet-desc">France 24: European diplomatic angle. RT Arabic: Russian-Iranian alignment framing. Read RT as a primary source for understanding Moscow's messaging to Arab audiences.</div></div></div>
+    </div>
+  </div>
+
+  <!-- ═══ DISINFORMATION ═══ -->
+  <div id="tab-disinfo" class="section">
+    <div class="card" style="margin-bottom:1rem;"><div class="card-head"><div class="dot" style="background:#888780;"></div>Analytical framework</div><div class="card-body">The productive question is not "who lies more" but <strong>what type of manipulation each actor deploys, and for what strategic purpose.</strong> All three primary belligerents are engaged in systematic narrative management.</div></div>
+    <div class="chart-wrap">
+      <div class="chart-title">Information operations — cross-actor comparison</div>
+      <div style="overflow-x:auto;">
+        <table class="dis-table">
+          <thead><tr><th style="width:13%;">Actor</th><th style="width:28%;">Primary methods</th><th style="width:27%;">Strategic purpose</th><th>Documented examples</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span style="display:inline-block;padding:2px 7px;background:#FAECE7;color:#712B13;border-radius:4px;font-size:11px;font-weight:600;margin-bottom:4px;">Iran</span><br><strong style="color:var(--txt);">State media + IRGC</strong></td>
+              <td><span class="tag-pill" style="background:#FCEBEB;color:#A32D2D;">AI-doctored imagery</span><span class="tag-pill" style="background:#FCEBEB;color:#A32D2D;">Recycled footage</span><span class="tag-pill" style="background:#FAEEDA;color:#633806;">Astroturfing</span><span class="tag-pill" style="background:#FAEEDA;color:#633806;">Protest reframing</span></td>
+              <td>Bolster domestic morale under bombardment; delegitimise protests as foreign interference; sustain "resistance" narrative</td>
+              <td style="font-size:11px;">18 false wartime claims since 28 Feb (NewsGuard). Chilean Navy pilot misidentified as captured Israeli pilot — debunked Reuters/PolitiFact. Telegram accounts pivoted from Scottish independence to pro-Iran war content.</td>
+            </tr>
+            <tr>
+              <td><span style="display:inline-block;padding:2px 7px;background:#E6F1FB;color:#0C447C;border-radius:4px;font-size:11px;font-weight:600;margin-bottom:4px;">US</span><br><strong style="color:var(--txt);">White House + CENTCOM</strong></td>
+              <td><span class="tag-pill" style="background:#EEEDFE;color:#3C3489;">Narrative inflation</span><span class="tag-pill" style="background:#FAEEDA;color:#633806;">Casualty downplaying</span><span class="tag-pill" style="background:#FCEBEB;color:#A32D2D;">Media suppression</span><span class="tag-pill" style="background:#FAEEDA;color:#633806;">Market signalling</span></td>
+              <td>Manage market expectations; pressure Iran to negotiate; suppress civilian casualty coverage; shape international legitimacy framing</td>
+              <td style="font-size:11px;">White House labelled CNN nuclear report "fake news." FCC Chair threatened broadcaster licences. Trump ceasefire claims triggered trillion-dollar market swings. CENTCOM video mixed real footage with video game clips.</td>
+            </tr>
+            <tr>
+              <td><span style="display:inline-block;padding:2px 7px;background:#EAF3DE;color:#27500A;border-radius:4px;font-size:11px;font-weight:600;margin-bottom:4px;">Israel</span><br><strong style="color:var(--txt);">IDF + government</strong></td>
+              <td><span class="tag-pill" style="background:#EEEDFE;color:#3C3489;">Defensive framing</span><span class="tag-pill" style="background:#F1EFE8;color:#444441;">Strike justification</span><span class="tag-pill" style="background:#FAEEDA;color:#633806;">Verification blockade</span></td>
+              <td>Frame war as existential; pre-empt international legal accountability; sustain Netanyahu's political position; limit independent civilian casualty data</td>
+              <td style="font-size:11px;">IRIB studio strike (killing editor-in-chief on live TV) described as targeting "secret military communications." International Federation of Journalists condemned it as a war crime.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SOURCE GUIDE ═══ -->
+  <div id="tab-sources" class="section">
+    <div class="card" style="margin-bottom:1rem;"><div class="card-head"><div class="dot" style="background:#888780;"></div>How to use this guide</div><div class="card-body">Sources are organised by category. Always identify funding and editorial orientation before citing. For contested claims, triangulate across at least two categories.</div></div>
+
+    <div class="src-cat" style="background:#E6F1FB;color:#0C447C;">UN &amp; international institutions</div>
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="outlet-row"><div class="outlet-badge" style="background:#E6F1FB;color:#0C447C;">UN Secretariat</div><div><div class="outlet-name">UN News</div><div class="outlet-desc">news.un.org — Official UN reporting. Source for Jean Arnault appointment, UNOPS Task Force, Guterres statements, and OHCHR humanitarian data.</div></div></div>
+      <div class="outlet-row"><div class="outlet-badge" style="background:#E6F1FB;color:#0C447C;">UN Security Council</div><div><div class="outlet-name">UN Meetings Coverage</div><div class="outlet-desc">press.un.org — Source for UNSC Resolution 2817 (condemning Iranian attacks on Gulf neighbours) and emergency session coverage from 1 March.</div></div></div>
+      <div class="outlet-row"><div class="outlet-badge" style="background:#E6F1FB;color:#0C447C;">UN Human Rights</div><div><div class="outlet-name">OHCHR</div><div class="outlet-desc">ohchr.org — UN experts' call for ceasefire, condemnation of Minab school strike (160+ children killed), and accountability demands against all parties.</div></div></div>
+    </div>
+
+    <div class="src-cat" style="background:#FAEEDA;color:#633806;">A — Prominent Arab newspapers</div>
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="outlet-row"><div class="outlet-badge" style="background:#FAEEDA;color:#633806;">Saudi &middot; Pan-Arab</div><div><div class="outlet-name">Asharq Al-Awsat</div><div class="outlet-desc">english.aawsat.com — Most credible pan-Arab paper. Saudi Research and Media Group. Best for Gulf diplomatic sourcing and nuanced Arab-world analysis.</div></div></div>
+      <div class="outlet-row"><div class="outlet-badge" style="background:#E1F5EE;color:#085041;">Lebanon</div><div><div class="outlet-name">An-Nahar</div><div class="outlet-desc">annahar.com — Est. 1933. Pro-state, secular-leaning. Best for Lebanese government and anti-Hezbollah community positions.</div></div></div>
+      <div class="outlet-row"><div class="outlet-badge" style="background:#E6F1FB;color:#0C447C;">UAE state</div><div><div class="outlet-name">Al-Ittihad</div><div class="outlet-desc">alittihad.ae — UAE government-aligned daily. Reflects official Emirati sovereignty framing. Arabic-language primary.</div></div></div>
+      <div class="outlet-row"><div class="outlet-badge" style="background:#E1F5EE;color:#085041;">Egypt state</div><div><div class="outlet-name">Al Ahram / Ahram Online</div><div class="outlet-desc">english.ahram.org.eg — Est. 1875. State-affiliated. Best for Egyptian mediation, "double condemnation" framing, Palestinian linkage.</div></div></div>
+      <div class="outlet-row"><div class="outlet-badge" style="background:#FCEBEB;color:#791F1F;">Hezbollah-aligned</div><div><div class="outlet-name">Al-Akhbar (Lebanon)</div><div class="outlet-desc">al-akhbar.com — Pro-resistance. Counter-narrative to An-Nahar. Use alongside An-Nahar to map Lebanon's communal fracture.</div></div></div>
+      <div class="outlet-row"><div class="outlet-badge" style="background:#EEEDFE;color:#3C3489;">Iraq independent</div><div><div class="outlet-name">Al-Mada / Al-Sabah (Iraq)</div><div class="outlet-desc">almadapaper.net / alsabaah.iq — Track Baghdad's impossible position between US alliance and Iran-linked PMF.</div></div></div>
+    </div>
+
+    <div class="src-cat" style="background:#E6F1FB;color:#0C447C;">B — News and digital websites</div>
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="outlet-row"><div class="outlet-badge" style="background:#E6F1FB;color:#0C447C;">Qatar state</div><div><div class="outlet-name">Al Jazeera Net</div><div class="outlet-desc">aljazeera.com — World's most-read Arabic news site. Best for on-the-ground conflict coverage, civilian harm, Arab public sentiment.</div></div></div>
+      <div class="outlet-row"><div class="outlet-badge" style="background:#FAECE7;color:#712B13;">Saudi-owned</div><div><div class="outlet-name">Al Arabiya / Sky News Arabia</div><div class="outlet-desc">english.alarabiya.net — Gulf's dominant breaking news platform. Strong US military sourcing. Gulf government alignment.</div></div></div>
+      <div class="outlet-row"><div class="outlet-badge" style="background:#E1F5EE;color:#085041;">French state</div><div><div class="outlet-name">France 24 Arabic</div><div class="outlet-desc">france24.com/ar — European diplomatic angle distinct from US/Gulf/Iranian perspectives.</div></div></div>
+      <div class="outlet-row"><div class="outlet-badge" style="background:#FCEBEB;color:#791F1F;">Russian state</div><div><div class="outlet-name">RT Arabic</div><div class="outlet-desc">arabic.rt.com — Read as primary source for Russian messaging to Arab audiences — not as independent journalism.</div></div></div>
+    </div>
+
+    <div class="src-cat" style="background:#FAEEDA;color:#633806;">C — Economic press</div>
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="outlet-row"><div class="outlet-badge" style="background:#FAEEDA;color:#633806;">Saudi economic</div><div><div class="outlet-name">Al Eqtisadiah</div><div class="outlet-desc">aleqt.com — Saudi Arabia's premier economic daily. Best for Gulf energy market analysis, Hormuz impact, GCC structural damage.</div></div></div>
+    </div>
+
+    <div class="src-cat" style="background:#FCEBEB;color:#A32D2D;">D — Iranian media (Farsi and Arabic)</div>
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="outlet-row"><div class="outlet-badge" style="background:#FCEBEB;color:#791F1F;">Iran hardline</div><div><div class="outlet-name">Kayhan Arabic / Al-Wefagh</div><div class="outlet-desc">Kayhan linked to Supreme Leader's office. Al-Wefagh is the government's Arabic daily. Ideological ceiling of Iranian state messaging.</div></div></div>
+      <div class="outlet-row"><div class="outlet-badge" style="background:#FCEBEB;color:#791F1F;">Iran state agency</div><div><div class="outlet-name">Iran Press / Al-Alam TV</div><div class="outlet-desc">iranpress.com / alalam.ir — Iran Press: official news agency. Al-Alam: Arabic diplomatic outreach to Iraq, Lebanon, Yemen.</div></div></div>
+      <div class="outlet-row"><div class="outlet-badge" style="background:#FAEEDA;color:#633806;">Saudi-linked &middot; diaspora</div><div><div class="outlet-name">Iran International (Arabic)</div><div class="outlet-desc">iranintl.com/ar — London-based, Saudi-linked. Sharply anti-regime. Note: accused of pro-monarchist framing.</div></div></div>
+    </div>
+  </div>
+
+  <div class="gen-bar">Generated with Claude Sonnet 4.6 (Anthropic) &middot; 30 March 2026 &middot; Data from Arabic &amp; regional sources &middot; Refresh prompt available on request</div>
+
+</div>
+
+<script>
+function showTab(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+const gridC = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+const tickC = '#888780';
+
+new Chart(document.getElementById('strikeChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Israel (17%)', 'Saudi Arabia (28%)', 'UAE (22%)', 'Kuwait (14%)', 'Other Gulf (19%)'],
+    datasets: [{ data: [17,28,22,14,19], backgroundColor: ['#E24B4A','#EF9F27','#378ADD','#1D9E75','#7F77DD'], borderWidth: 0 }]
+  },
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: '65%' }
+});
+
+new Chart(document.getElementById('oilChart'), {
+  type: 'line',
+  data: {
+    labels: ['26 Feb','1 Mar','5 Mar','10 Mar','15 Mar','20 Mar','25 Mar','30 Mar'],
+    datasets: [
+      { label: 'Brent crude', data: [76,88,94,102,108,107,93,115], borderColor: '#E24B4A', backgroundColor: 'rgba(226,75,74,0.08)', borderWidth: 2, tension: 0.3, fill: true, pointRadius: 3 },
+      { label: 'Pre-war level', data: [76,76,76,76,76,76,76,76], borderColor: '#B5D4F4', borderWidth: 1.5, borderDash: [4,4], pointRadius: 0, fill: false },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { grid: { color: gridC }, ticks: { color: tickC, callback: v => '$'+v }, min: 60 },
+      x: { grid: { color: gridC }, ticks: { color: tickC, maxRotation: 30 } }
+    }
+  }
+});
+
+new Chart(document.getElementById('impactChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Qatar (LNG)','Iraq (oil/food)','Lebanon','Kuwait','UAE','Bahrain','Saudi Arabia','Egypt','Jordan'],
+    datasets: [{ data: [88,92,80,72,68,65,58,45,40], backgroundColor: ['#E24B4A','#E24B4A','#E24B4A','#EF9F27','#EF9F27','#EF9F27','#EF9F27','#EF9F27','#378ADD'], borderWidth: 0, borderRadius: 3 }]
+  },
+  options: {
+    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: gridC }, ticks: { color: tickC }, max: 100 },
+      y: { grid: { color: 'transparent' }, ticks: { color: tickC, font: { size: 11 } } }
+    }
+  }
+});
+</script>
+</body>
+</html>
